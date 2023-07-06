@@ -1,5 +1,6 @@
 using MagicVilla.API.Data;
 using MagicVilla.API.Models.DTO;
+using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MagicVilla.API.Controllers;
@@ -84,6 +85,25 @@ public class VilasController : ControllerBase
         if (vila == null) return NotFound();
 
         MagicVillaStore.listaVilas.Remove(vila);
+
+        return NoContent();
+    }
+
+    [HttpPatch("{id:int}", Name = "AtualizarParcialmenteVila")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult AtualizarParcialmenteVila(int id, [FromBody] JsonPatchDocument<VilaDTO> patchDTOO)
+    {
+        if (patchDTOO == null || id <= 0) return BadRequest("Vila inválida");
+
+        var vila = MagicVillaStore.listaVilas.FirstOrDefault(v => v.Id == id);
+
+        if (vila == null) return NotFound();
+
+        patchDTOO.ApplyTo(vila, ModelState);
+
+        if (!ModelState.IsValid) return BadRequest(ModelState);
 
         return NoContent();
     }
