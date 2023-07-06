@@ -51,4 +51,40 @@ public class VilasController : ControllerBase
 
         return CreatedAtRoute("ObterVila", new { id = vilaDTO.Id }, vilaDTO);
     }
+
+    [HttpPut("{id:int}", Name = "AtualizarVila")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult AtualizarVila(int id, [FromBody] VilaDTO vilaDTO)
+    {
+        if (vilaDTO == null || id != vilaDTO.Id) return BadRequest("Vila inválida");
+
+        if (vilaDTO.Id <= 0) return BadRequest("Id inválido");
+
+        var vila = MagicVillaStore.listaVilas.FirstOrDefault(v => v.Id == id);
+
+        vila.Nome = vilaDTO.Nome;
+        vila.Ocupacao = vilaDTO.Ocupacao;
+        vila.tamanhoMetroQuadrado = vilaDTO.tamanhoMetroQuadrado;
+
+        return NoContent();
+    }
+
+    [HttpDelete("{id:int}", Name = "RemoverVila")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public IActionResult RemoverVila(int id)
+    {
+        if (id <= 0) return BadRequest("Id inválido");
+
+        var vila = MagicVillaStore.listaVilas.FirstOrDefault(v => v.Id == id);
+
+        if (vila == null) return NotFound();
+
+        MagicVillaStore.listaVilas.Remove(vila);
+
+        return NoContent();
+    }
 }
