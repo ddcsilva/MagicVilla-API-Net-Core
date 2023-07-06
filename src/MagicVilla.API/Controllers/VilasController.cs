@@ -20,20 +20,20 @@ public class VilasController : ControllerBase
 
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public ActionResult<IEnumerable<VilaDTO>> ObterVilas()
+    public async Task<ActionResult<IEnumerable<VilaDTO>>> ObterVilas()
     {
-        return Ok(_context.Vilas.ToList());
+        return Ok(await _context.Vilas.ToListAsync());
     }
 
     [HttpGet("{id:int}", Name = "ObterVila")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public ActionResult<VilaDTO> ObterVila(int id)
+    public async Task<ActionResult<VilaDTO>> ObterVila(int id)
     {
         if (id <= 0) { return BadRequest("Id inválido"); }
 
-        var vila = _context.Vilas.FirstOrDefault(v => v.Id == id);
+        var vila = await _context.Vilas.FirstOrDefaultAsync(v => v.Id == id);
 
         if (vila == null) return NotFound();
 
@@ -44,13 +44,11 @@ public class VilasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public ActionResult<VilaDTO> AdicionarVila([FromBody] VilaDTO vilaDTO)
+    public async Task<ActionResult<VilaDTO>> AdicionarVila([FromBody] CriacaoVilaDTO vilaDTO)
     {
         if (vilaDTO == null) return BadRequest("Vila inválida");
 
-        if (vilaDTO.Id > 0) return StatusCode(StatusCodes.Status500InternalServerError);
-
-        if (_context.Vilas.Any(v => v.Nome.ToUpper().Trim() == vilaDTO.Nome.ToUpper().Trim()))
+        if (await _context.Vilas.AnyAsync(v => v.Nome.ToUpper().Trim() == vilaDTO.Nome.ToUpper().Trim()))
         {
             ModelState.AddModelError("Nome", "Vila já cadastrada");
             return BadRequest(ModelState);
@@ -58,7 +56,6 @@ public class VilasController : ControllerBase
 
         Vila model = new Vila()
         {
-            Id = vilaDTO.Id,
             Nome = vilaDTO.Nome,
             Detalhes = vilaDTO.Detalhes,
             Tarifa = vilaDTO.Tarifa,
@@ -68,17 +65,17 @@ public class VilasController : ControllerBase
             Comodidade = vilaDTO.Comodidade,
         };
 
-        _context.Vilas.Add(model);
-        _context.SaveChanges();
+        await _context.Vilas.AddAsync(model);
+        await _context.SaveChangesAsync();
 
-        return CreatedAtRoute("ObterVila", new { id = vilaDTO.Id }, vilaDTO);
+        return CreatedAtRoute("ObterVila", new { id = model.Id }, vilaDTO);
     }
 
     [HttpPut("{id:int}", Name = "AtualizarVila")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult AtualizarVila(int id, [FromBody] VilaDTO vilaDTO)
+    public async Task<IActionResult> AtualizarVila(int id, [FromBody] AtualizacaoVilaDTO vilaDTO)
     {
         if (vilaDTO == null || id != vilaDTO.Id) return BadRequest("Vila inválida");
 
@@ -97,7 +94,7 @@ public class VilasController : ControllerBase
         };
 
         _context.Vilas.Update(model);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }
@@ -106,16 +103,16 @@ public class VilasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult RemoverVila(int id)
+    public async Task<IActionResult> RemoverVila(int id)
     {
         if (id <= 0) return BadRequest("Id inválido");
 
-        var vila = _context.Vilas.FirstOrDefault(v => v.Id == id);
+        var vila = await _context.Vilas.FirstOrDefaultAsync(v => v.Id == id);
 
         if (vila == null) return NotFound();
 
         _context.Vilas.Remove(vila);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         return NoContent();
     }
@@ -124,13 +121,13 @@ public class VilasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult AtualizarParcialmenteVila(int id, [FromBody] JsonPatchDocument<VilaDTO> patchDTO)
+    public async Task<IActionResult> AtualizarParcialmenteVila(int id, [FromBody] JsonPatchDocument<AtualizacaoVilaDTO> patchDTO)
     {
         if (patchDTO == null || id <= 0) return BadRequest("Vila inválida");
 
-        var vila = _context.Vilas.AsNoTracking().FirstOrDefault(v => v.Id == id);
+        var vila = await _context.Vilas.AsNoTracking().FirstOrDefaultAsync(v => v.Id == id);
 
-        VilaDTO vilaDTO = new()
+        AtualizacaoVilaDTO vilaDTO = new()
         {
             Id = vila.Id,
             Nome = vila.Nome,
@@ -159,7 +156,7 @@ public class VilasController : ControllerBase
         };
 
         _context.Vilas.Update(model);
-        _context.SaveChanges();
+        await _context.SaveChangesAsync();
 
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
