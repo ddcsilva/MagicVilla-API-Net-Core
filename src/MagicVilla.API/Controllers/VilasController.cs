@@ -1,7 +1,9 @@
 using MagicVilla.API.Data;
+using MagicVilla.API.Models;
 using MagicVilla.API.Models.DTO;
 using Microsoft.AspNetCore.JsonPatch;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace MagicVilla.API.Controllers;
 
@@ -9,11 +11,18 @@ namespace MagicVilla.API.Controllers;
 [ApiController]
 public class VilasController : ControllerBase
 {
+    private readonly MagicVillaContext _context;
+
+    public VilasController(MagicVillaContext context)
+    {
+        _context = context;
+    }
+
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public ActionResult<IEnumerable<VilaDTO>> ObterVilas()
     {
-        return Ok(MagicVillaStore.listaVilas);
+        return Ok(_context.Vilas.ToList());
     }
 
     [HttpGet("{id:int}", Name = "ObterVila")]
@@ -22,13 +31,13 @@ public class VilasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public ActionResult<VilaDTO> ObterVila(int id)
     {
-        if (id <= 0) return BadRequest("Id inválido");
+        if (id <= 0) { return BadRequest("Id inválido"); }
 
-        var vila = MagicVillaStore.listaVilas.FirstOrDefault(v => v.Id == id);
+        var vila = _context.Vilas.FirstOrDefault(v => v.Id == id);
 
         if (vila == null) return NotFound();
 
-        return Ok();
+        return Ok(vila);
     }
 
     [HttpPost]
@@ -41,14 +50,26 @@ public class VilasController : ControllerBase
 
         if (vilaDTO.Id > 0) return StatusCode(StatusCodes.Status500InternalServerError);
 
-        if (MagicVillaStore.listaVilas.Any(v => v.Nome == vilaDTO.Nome)) 
+        if (_context.Vilas.Any(v => v.Nome.ToUpper().Trim() == vilaDTO.Nome.ToUpper().Trim()))
         {
             ModelState.AddModelError("Nome", "Vila já cadastrada");
             return BadRequest(ModelState);
         }
 
-        vilaDTO.Id = MagicVillaStore.listaVilas.Max(v => v.Id) + 1;
-        MagicVillaStore.listaVilas.Add(vilaDTO);
+        Vila model = new Vila()
+        {
+            Id = vilaDTO.Id,
+            Nome = vilaDTO.Nome,
+            Detalhes = vilaDTO.Detalhes,
+            Tarifa = vilaDTO.Tarifa,
+            MetrosQuadrados = vilaDTO.MetrosQuadrados,
+            Ocupacao = vilaDTO.Ocupacao,
+            UrlDaImagem = vilaDTO.UrlDaImagem,
+            Comodidade = vilaDTO.Comodidade,
+        };
+
+        _context.Vilas.Add(model);
+        _context.SaveChanges();
 
         return CreatedAtRoute("ObterVila", new { id = vilaDTO.Id }, vilaDTO);
     }
@@ -63,11 +84,20 @@ public class VilasController : ControllerBase
 
         if (vilaDTO.Id <= 0) return BadRequest("Id inválido");
 
-        var vila = MagicVillaStore.listaVilas.FirstOrDefault(v => v.Id == id);
+        Vila model = new Vila()
+        {
+            Id = vilaDTO.Id,
+            Nome = vilaDTO.Nome,
+            Detalhes = vilaDTO.Detalhes,
+            Tarifa = vilaDTO.Tarifa,
+            MetrosQuadrados = vilaDTO.MetrosQuadrados,
+            Ocupacao = vilaDTO.Ocupacao,
+            UrlDaImagem = vilaDTO.UrlDaImagem,
+            Comodidade = vilaDTO.Comodidade,
+        };
 
-        vila.Nome = vilaDTO.Nome;
-        vila.Ocupacao = vilaDTO.Ocupacao;
-        vila.tamanhoMetroQuadrado = vilaDTO.tamanhoMetroQuadrado;
+        _context.Vilas.Update(model);
+        _context.SaveChanges();
 
         return NoContent();
     }
@@ -80,11 +110,12 @@ public class VilasController : ControllerBase
     {
         if (id <= 0) return BadRequest("Id inválido");
 
-        var vila = MagicVillaStore.listaVilas.FirstOrDefault(v => v.Id == id);
+        var vila = _context.Vilas.FirstOrDefault(v => v.Id == id);
 
         if (vila == null) return NotFound();
 
-        MagicVillaStore.listaVilas.Remove(vila);
+        _context.Vilas.Remove(vila);
+        _context.SaveChanges();
 
         return NoContent();
     }
@@ -93,15 +124,42 @@ public class VilasController : ControllerBase
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public IActionResult AtualizarParcialmenteVila(int id, [FromBody] JsonPatchDocument<VilaDTO> patchDTOO)
+    public IActionResult AtualizarParcialmenteVila(int id, [FromBody] JsonPatchDocument<VilaDTO> patchDTO)
     {
-        if (patchDTOO == null || id <= 0) return BadRequest("Vila inválida");
+        if (patchDTO == null || id <= 0) return BadRequest("Vila inválida");
 
-        var vila = MagicVillaStore.listaVilas.FirstOrDefault(v => v.Id == id);
+        var vila = _context.Vilas.AsNoTracking().FirstOrDefault(v => v.Id == id);
+
+        VilaDTO vilaDTO = new()
+        {
+            Id = vila.Id,
+            Nome = vila.Nome,
+            Detalhes = vila.Detalhes,
+            Tarifa = vila.Tarifa,
+            MetrosQuadrados = vila.MetrosQuadrados,
+            Ocupacao = vila.Ocupacao,
+            UrlDaImagem = vila.UrlDaImagem,
+            Comodidade = vila.Comodidade,
+        };
 
         if (vila == null) return NotFound();
 
-        patchDTOO.ApplyTo(vila, ModelState);
+        patchDTO.ApplyTo(vilaDTO, ModelState);
+
+        Vila model = new Vila()
+        {
+            Id = vilaDTO.Id,
+            Nome = vilaDTO.Nome,
+            Detalhes = vilaDTO.Detalhes,
+            Tarifa = vilaDTO.Tarifa,
+            MetrosQuadrados = vilaDTO.MetrosQuadrados,
+            Ocupacao = vilaDTO.Ocupacao,
+            UrlDaImagem = vilaDTO.UrlDaImagem,
+            Comodidade = vilaDTO.Comodidade,
+        };
+
+        _context.Vilas.Update(model);
+        _context.SaveChanges();
 
         if (!ModelState.IsValid) return BadRequest(ModelState);
 
